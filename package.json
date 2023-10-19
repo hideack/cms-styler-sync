@@ -1,0 +1,15 @@
+{
+  "name": "cms-styler-sync",
+  "version": "1.0.0",
+  "description": "システムに保存されているカラーミーショップのデザインテンプレートを取得してローカルに保存したり、ローカルに保存されたものを反映させることができます。",
+  "main": "command.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@git.pepabo.com:terry/cms-styler-sync.git"
+  },
+  "author": "hideaki terai",
+  "license": "ISC"
+}
