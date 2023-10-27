@@ -5,6 +5,7 @@ const tough = require('tough-cookie');
 const axiosCookieJarSupport = require('axios-cookiejar-support').wrapper;
 const fs = require('fs');
 const iconv = require('iconv-lite');
+const encoding = require('encoding-japanese');
 
 axiosCookieJarSupport(axios);
 
@@ -61,7 +62,7 @@ async function login(loginId, loginPassword) {
   }
 }
 
-async function fetchData(loginId, loginPassword, tmplUid) {
+async function fetchTemplate(loginId, loginPassword, tmplUid) {
   console.log('Attempting to login...');
   if (!await login(loginId, loginPassword)) return;
 
@@ -145,14 +146,31 @@ async function uploadTemplates(loginId, loginPassword, tmplUid) {
   const localHtml = fs.readFileSync('0.html', 'utf-8');
   const localCss = fs.readFileSync('0.css', 'utf-8');
 
-  postData.html = iconv.encode(localHtml, 'EUC-JP');
-  postData.css = iconv.encode(localCss, 'EUC-JP');
+  // EUC-JPへ変換
+  const encodedHtml = encoding.convert(localHtml, {
+    to: 'EUCJP',
+    from: 'UNICODE',
+    type: 'array'
+  });
 
-  fs.writeFileSync('encoded.html', postData.html);
+  const encodedCss = encoding.convert(localCss, {
+    to: 'EUCJP',
+    from: 'UNICODE',
+    type: 'array'
+  });
 
-  // 保存
+  postData.html = encoding.urlEncode(encodedHtml);
+  postData.css = encoding.urlEncode(encodedCss);
+
+  let postString = Object.keys(postData)
+    .filter(key => key !== 'html' && key !== 'css')
+    .map(key => `${key}=${encodeURIComponent(postData[key])}`)
+    .join('&');
+
+  postString += `&html=${postData.html}&css=${postData.css}`;
+
   const uploadUrl = 'https://admin.shop-pro.jp/?mode=design_tmpl_edt&smode=HTCS&type=TBLUPD';
-  const uploadResponse = await instance.post(uploadUrl, qs.stringify(postData), {
+  const uploadResponse = await instance.post(uploadUrl, postString, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded; charset=EUC-JP'
     }
@@ -166,6 +184,6 @@ async function uploadTemplates(loginId, loginPassword, tmplUid) {
 }
 
 module.exports = {
-  fetchData,
+  fetchTemplate,
   uploadTemplates
 };
