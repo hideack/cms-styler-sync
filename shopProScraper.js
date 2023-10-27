@@ -62,7 +62,7 @@ async function login(loginId, loginPassword) {
   }
 }
 
-async function fetchData(loginId, loginPassword, tmplUid) {
+async function fetchTemplate(loginId, loginPassword, tmplUid) {
   console.log('Attempting to login...');
   if (!await login(loginId, loginPassword)) return;
 
@@ -184,6 +184,6 @@ async function uploadTemplates(loginId, loginPassword, tmplUid) {
 }
 
 module.exports = {
-  fetchData,
+  fetchTemplate,
   uploadTemplates
 };

@@ -1,5 +1,5 @@
 const program = require('commander');
-const { fetchData, uploadTemplates } = require('./shopProScraper');
+const { fetchData, uploadTemplates, fetchTemplate } = require('./shopProScraper');
 
 program
   .version('1.0.0')
@@ -16,7 +16,7 @@ program
     }
 
     if (options.import) {
-      fetchData(options.id, options.password, options.uid);
+      fetchTemplate(options.id, options.password, options.uid);
     } else if (options.export) {
       uploadTemplates(options.id, options.password, options.uid);
     } else {
