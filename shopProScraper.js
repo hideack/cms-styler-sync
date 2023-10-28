@@ -4,7 +4,6 @@ const cheerio = require('cheerio');
 const tough = require('tough-cookie');
 const axiosCookieJarSupport = require('axios-cookiejar-support').wrapper;
 const fs = require('fs');
-const iconv = require('iconv-lite');
 const encoding = require('encoding-japanese');
 
 axiosCookieJarSupport(axios);
@@ -26,7 +25,7 @@ const instance = axios.create({
   jar: cookieJar,
   withCredentials: true,
   transformResponse: [(data) => {
-    return iconv.decode(data, 'EUC-JP');
+    return encoding.convert(data, { to: 'UNICODE', from: 'EUCJP', type: 'string' });
   }]
 });
 
@@ -123,18 +122,94 @@ async function uploadTemplates(loginId, loginPassword, tmplUid) {
 
   console.log('Attempting to upload templates...');
 
-  const targetUrl = `https://admin.shop-pro.jp/?mode=design_tmpl_edt&smode=HTCS&tmpl_uid=${tmplUid}&tmpl_type=0`;
-  const pageResponse = await instance.get(targetUrl);
+  // HTMLとCSSがペアになっているテンプレート
+  for (let tmplType = 0; tmplType <= 7; tmplType++) {
+    const htmlFileName = `${tmplType}.html`;
+    const cssFileName = `${tmplType}.css`;
 
-  if (pageResponse.status !== 200) {
-    console.error('Failed to fetch the template edit page.');
-    return;
+    if (!fs.existsSync(htmlFileName) || !fs.existsSync(cssFileName)) {
+      console.log(`Skipping upload for ${htmlFileName} and ${cssFileName} as one or both files do not exist.`);
+      continue;
+    }
+
+    console.log(`Check for ${htmlFileName} and ${cssFileName} `);
+
+    const localHtml = fs.readFileSync(htmlFileName, 'utf-8');
+    const localCss = fs.readFileSync(cssFileName, 'utf-8');
+
+    const targetUrl = `${BASE_URL}&tmpl_uid=${tmplUid}&tmpl_type=${tmplType}`;
+    const pageResponse = await instance.get(targetUrl);
+
+    if (pageResponse.status !== 200) {
+      console.error('Failed to fetch the template edit page.');
+      return;
+    }
+
+    const pageHtml = pageResponse.data;
+    const $ = cheerio.load(pageHtml, { decodeEntities: false });
+
+    const postData = buildPostData($);
+    encodeAndSetData(localHtml, localCss, postData);
+
+    const postString = buildPostString(postData);
+    const uploadUrl = 'https://admin.shop-pro.jp/?mode=design_tmpl_edt&smode=HTCS&type=TBLUPD';
+    const uploadResponse = await instance.post(uploadUrl, postString, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=EUC-JP'
+      }
+    });
+
+    if (uploadResponse.status === 200) {
+      console.log(`Templates for ${htmlFileName} and ${cssFileName} uploaded successfully.`);
+    } else {
+      console.error(`Failed to upload templates for ${htmlFileName} and ${cssFileName}.`);
+    }
   }
 
-  const pageHtml = pageResponse.data;
-  const $ = cheerio.load(pageHtml, { decodeEntities: false });
+  // CSSのみ
+  for (let tmplType = 51; tmplType <= 55; tmplType++) {
+    const cssFileName = `${tmplType}.css`;
 
-  // POSTデータ取得, 置き換え
+    if (!fs.existsSync(cssFileName)) {
+      console.log(`Skipping upload for ${cssFileName} as the file does not exist.`);
+      continue;
+    }
+
+    const localCss = fs.readFileSync(cssFileName, 'utf-8');
+
+    const targetUrl = `${BASE_CSS_URL}&tmpl_uid=${tmplUid}&tmpl_type=${tmplType}`;
+    const pageResponse = await instance.get(targetUrl);
+
+    if (pageResponse.status !== 200) {
+      console.error('Failed to fetch the CSS edit page.');
+      return;
+    }
+
+    const pageHtml = pageResponse.data;
+    const $ = cheerio.load(pageHtml, { decodeEntities: false });
+
+    const postData = buildPostData($);
+    encodeAndSetCss(localCss, postData);
+
+    const postString = buildPostString(postData);
+    const uploadUrl = 'https://admin.shop-pro.jp/?mode=design_tmpl_edt&smode=HTCS&type=TBLUPD';
+    const uploadResponse = await instance.post(uploadUrl, postString, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=EUC-JP'
+      }
+    });
+
+    if (uploadResponse.status === 200) {
+      console.log(`CSS for ${cssFileName} uploaded successfully.`);
+    } else {
+      console.error(`Failed to upload CSS for ${cssFileName}.`);
+    }
+  }
+
+  console.log('Templates upload process finished.');
+}
+
+function buildPostData($) {
   const postData = {};
   $('#design_edit input, #design_edit select, #design_edit textarea').each((i, elem) => {
     const name = $(elem).attr('name');
@@ -142,10 +217,10 @@ async function uploadTemplates(loginId, loginPassword, tmplUid) {
       postData[name] = $(elem).val();
     }
   });
+  return postData;
+}
 
-  const localHtml = fs.readFileSync('0.html', 'utf-8');
-  const localCss = fs.readFileSync('0.css', 'utf-8');
-
+function encodeAndSetData(localHtml, localCss, postData) {
   // EUC-JPへ変換
   const encodedHtml = encoding.convert(localHtml, {
     to: 'EUCJP',
@@ -161,26 +236,27 @@ async function uploadTemplates(loginId, loginPassword, tmplUid) {
 
   postData.html = encoding.urlEncode(encodedHtml);
   postData.css = encoding.urlEncode(encodedCss);
+}
 
+function encodeAndSetCss(localCss, postData) {
+  // EUC-JPへ変換
+  const encodedCss = encoding.convert(localCss, {
+    to: 'EUCJP',
+    from: 'UNICODE',
+    type: 'array'
+  });
+
+  postData.css = encoding.urlEncode(encodedCss);
+}
+
+function buildPostString(postData) {
   let postString = Object.keys(postData)
     .filter(key => key !== 'html' && key !== 'css')
     .map(key => `${key}=${encodeURIComponent(postData[key])}`)
     .join('&');
 
   postString += `&html=${postData.html}&css=${postData.css}`;
-
-  const uploadUrl = 'https://admin.shop-pro.jp/?mode=design_tmpl_edt&smode=HTCS&type=TBLUPD';
-  const uploadResponse = await instance.post(uploadUrl, postString, {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=EUC-JP'
-    }
-  });
-
-  if (uploadResponse.status === 200) {
-    console.log('Templates uploaded successfully.');
-  } else {
-    console.error('Failed to upload templates.');
-  }
+  return postString;
 }
 
 module.exports = {
