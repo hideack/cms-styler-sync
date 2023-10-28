@@ -29,6 +29,22 @@ const instance = axios.create({
   }]
 });
 
+const FILE_NAME_MAPPING = {
+  0: "common",
+  1: "top",
+  2: "product_detail",
+  3: "product_list",
+  4: "trade_act",
+  5: "product_search_results",
+  6: "option_stock_price",
+  7: "privacy_policy",
+  51: "inquiry",
+  52: "my_account_login",
+  53: "tell_a_friend",
+  54: "newsletter_subscribe_unsubscribe",
+  55: "review"
+};
+
 async function login(loginId, loginPassword) {
   try {
     const loginResponse = await instance.post(LOGIN_URL, qs.stringify({
@@ -82,12 +98,12 @@ async function fetchTemplate(loginId, loginPassword, tmplUid) {
     const $ = cheerio.load(contentHtml, { decodeEntities: false });
 
     const textareaHtmlContent = $('textarea#html').text();
-    const htmlFileName = `${tmplType}.html`;
+    const htmlFileName = `${tmplType}_${FILE_NAME_MAPPING[tmplType]}.html`;
     fs.writeFileSync(htmlFileName, textareaHtmlContent, 'utf-8');
     console.log(`Saved content to ${htmlFileName}`);
 
     const textareaCssContent = $('textarea#css').text();
-    const cssFileName = `${tmplType}.css`;
+    const cssFileName = `${tmplType}_${FILE_NAME_MAPPING[tmplType]}.css`;
     fs.writeFileSync(cssFileName, textareaCssContent, 'utf-8');
     console.log(`Saved CSS to ${cssFileName}`);
   }
@@ -108,7 +124,7 @@ async function fetchTemplate(loginId, loginPassword, tmplUid) {
     const $ = cheerio.load(cssContentHtml, { decodeEntities: false });
     const textareaCSSContent = $('textarea#css').text();
 
-    const fileName = `${tmplType}.css`;
+    const fileName = `${tmplType}_${FILE_NAME_MAPPING[tmplType]}.css`;
     fs.writeFileSync(fileName, textareaCSSContent, 'utf-8');
     console.log(`Saved CSS content to ${fileName}`);
   }
@@ -124,8 +140,8 @@ async function uploadTemplates(loginId, loginPassword, tmplUid) {
 
   // HTMLとCSSがペアになっているテンプレート
   for (let tmplType = 0; tmplType <= 7; tmplType++) {
-    const htmlFileName = `${tmplType}.html`;
-    const cssFileName = `${tmplType}.css`;
+    const htmlFileName = `${tmplType}_${FILE_NAME_MAPPING[tmplType]}.html`;
+    const cssFileName = `${tmplType}_${FILE_NAME_MAPPING[tmplType]}.css`;
 
     if (!fs.existsSync(htmlFileName) || !fs.existsSync(cssFileName)) {
       console.log(`Skipping upload for ${htmlFileName} and ${cssFileName} as one or both files do not exist.`);
@@ -168,7 +184,7 @@ async function uploadTemplates(loginId, loginPassword, tmplUid) {
 
   // CSSのみ
   for (let tmplType = 51; tmplType <= 55; tmplType++) {
-    const cssFileName = `${tmplType}.css`;
+    const cssFileName = `${tmplType}_${FILE_NAME_MAPPING[tmplType]}.css`;
 
     if (!fs.existsSync(cssFileName)) {
       console.log(`Skipping upload for ${cssFileName} as the file does not exist.`);
