@@ -275,7 +275,30 @@ function buildPostString(postData) {
   return postString;
 }
 
+async function fetchDefaultTemplateUid(loginId, loginPassword) {
+  if (!await login(loginId, loginPassword)) {
+      console.error('Failed to login for fetching default template UID.');
+      return;
+  }
+
+  const LIST_URL = 'https://admin.shop-pro.jp/?mode=design_tmpl_lst';
+  const response = await instance.get(LIST_URL);
+
+  if (response.status !== 200) {
+      console.error('Failed to fetch the templates list.');
+      return;
+  }
+
+  const html = response.data;
+  const $ = cheerio.load(html);
+  const link = $('#pt_admin > div.MAIN_center > div > div > div > div.layout-content__main_cont > div.l-page > div.l-page__inner.l-page__inner--sm.u-mar-b-60 > div > div.design-tmpl-lst__tmp-data-text > div.design-tmpl-lst__tmp-data-buttons > a').attr('href');
+
+  const tmplUid = link.match(/tmpl_uid=(\d+)/)[1];
+  return tmplUid;
+}
+
 module.exports = {
   fetchTemplate,
-  uploadTemplates
+  uploadTemplates,
+  fetchDefaultTemplateUid
 };
