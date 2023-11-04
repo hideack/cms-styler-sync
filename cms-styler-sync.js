@@ -1,5 +1,15 @@
 const program = require('commander');
+const readlineSync = require('readline-sync');
+
 const { fetchData, uploadTemplates, fetchTemplate, fetchDefaultTemplateUid } = require('./shopProScraper');
+
+async function promptForInput(promptText) {
+  return new Promise((resolve) => {
+    rl.question(promptText, (answer) => {
+      resolve(answer);
+    });
+  });
+}
 
 program
   .version('1.0.0')
@@ -9,10 +19,13 @@ program
   .option('--import', 'Import templates from admin.shop-pro.jp')
   .option('--export', 'Export local templates to admin.shop-pro.jp')
   .action(async (options) => {
-    if (!options.id || !options.password) {
-      console.error('ID and PASSWORD are required.');
-      program.help();
-      process.exit(1);
+    if (!options.id) {
+      options.id = readlineSync.question('Please enter your Login ID: ');
+    }
+    if (!options.password) {
+      options.password = readlineSync.question('Please enter your Login Password: ', {
+        hideEchoBack: true
+      });
     }
 
     let tmplUid = options.uid;
