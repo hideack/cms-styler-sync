@@ -44,9 +44,11 @@ program
       program.help();
       process.exit(1);
     }
-  })
-  .parse(process.argv);
+  });
 
 if (!process.argv.slice(2).length) {
   program.outputHelp();
+  process.exit(1);
 }
+
+program.parse(process.argv);
