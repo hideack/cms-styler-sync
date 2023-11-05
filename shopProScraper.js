@@ -5,6 +5,7 @@ const tough = require('tough-cookie');
 const axiosCookieJarSupport = require('axios-cookiejar-support').wrapper;
 const fs = require('fs');
 const encoding = require('encoding-japanese');
+const packageInfo = require('./package.json');
 
 axiosCookieJarSupport(axios);
 
@@ -18,7 +19,8 @@ const instance = axios.create({
   baseURL: 'https://admin.shop-pro.jp/',
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded',
-    'Accept': '*/*'
+    'Accept': '*/*',
+    'User-Agent': `${packageInfo.name}/${packageInfo.version}` // UserAgentの設定
   },
   responseType: 'arraybuffer',
   maxRedirects: 0,
