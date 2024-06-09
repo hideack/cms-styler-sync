@@ -1,8 +1,10 @@
+#!/usr/bin/env node
+
 const program = require('commander');
 const fs = require('fs');
 const readlineSync = require('readline-sync');
 
-const { fetchData, uploadTemplates, fetchTemplate, fetchDefaultTemplateUid } = require('./shopProScraper');
+const { fetchData, uploadTemplates, fetchTemplate, fetchDefaultTemplateUid } = require('../shopProScraper');
 
 async function promptForInput(promptText) {
   return new Promise((resolve) => {

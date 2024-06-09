@@ -10,6 +10,9 @@
     "type": "git",
     "url": "git@git.pepabo.com:terry/cms-styler-sync.git"
   },
+  "bin" {
+    "cms-styler-sync" : "cms-styler-sync.js"
+  },
   "author": "hideaki terai",
   "license": "ISC",
   "dependencies": {
