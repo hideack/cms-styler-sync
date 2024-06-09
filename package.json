@@ -1,6 +1,6 @@
 {
   "name": "cms-styler-sync",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "システムに保存されているカラーミーショップのデザインテンプレートを取得してローカルに保存したり、ローカルに保存されたものを反映させることができます。",
   "main": "command.js",
   "scripts": {

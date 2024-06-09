@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const program = require('commander');
 const fs = require('fs');
 const readlineSync = require('readline-sync');
@@ -29,7 +31,7 @@ async function watchFilesAndUploadOnChange(loginId, loginPassword, tmplUid) {
 }
 
 program
-  .version('1.0.0')
+  .version('1.0.3')
   .option('-i, --id <id>', 'Login ID')
   .option('-p, --password <password>', 'Login Password')
   .option('-u, --uid [uid]', 'Template UID')
