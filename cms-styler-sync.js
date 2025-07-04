@@ -4,7 +4,7 @@ const program = require('commander');
 const fs = require('fs');
 const readlineSync = require('readline-sync');
 
-const { fetchData, uploadTemplates, fetchTemplate, fetchDefaultTemplateUid } = require('./shopProScraper');
+const { fetchData, uploadTemplates, fetchTemplate, fetchDefaultTemplateUid, setDebugMode } = require('./shopProScraper');
 
 async function promptForInput(promptText) {
   return new Promise((resolve) => {
@@ -38,7 +38,13 @@ program
   .option('--import', 'Import templates from admin.shop-pro.jp')
   .option('--export', 'Export local templates to admin.shop-pro.jp')
   .option('--watch', 'Watch for local changes and export templates automatically')
+  .option('--debug', 'Enable debug mode to show HTTP request/response logs')
   .action(async (options) => {
+    if (options.debug) {
+      setDebugMode(true);
+      console.log('Debug mode enabled - HTTP requests and responses will be logged');
+    }
+    
     if (!options.id) {
       options.id = readlineSync.question('Please enter your Login ID: ');
     }
