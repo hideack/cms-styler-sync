@@ -15,6 +15,38 @@ const BASE_CSS_URL = 'https://admin.shop-pro.jp/?mode=design_tmpl_edt&smode=CSS'
 
 const cookieJar = new tough.CookieJar();
 
+let debugMode = false;
+
+function setDebugMode(enabled) {
+  debugMode = enabled;
+}
+
+function logRequest(config) {
+  if (!debugMode) return;
+  
+  console.log('\n--- HTTP REQUEST ---');
+  console.log('Method:', config.method?.toUpperCase() || 'GET');
+  console.log('URL:', config.url);
+  console.log('Headers:', JSON.stringify(config.headers, null, 2));
+  if (config.data) {
+    console.log('Body:', config.data.toString().substring(0, 500) + (config.data.toString().length > 500 ? '...' : ''));
+  }
+  console.log('-------------------\n');
+}
+
+function logResponse(response) {
+  if (!debugMode) return;
+  
+  console.log('\n--- HTTP RESPONSE ---');
+  console.log('Status:', response.status);
+  console.log('Headers:', JSON.stringify(response.headers, null, 2));
+  console.log('Data Length:', response.data?.length || 0);
+  if (response.data && typeof response.data === 'string') {
+    console.log('Data Preview:', response.data.substring(0, 200) + (response.data.length > 200 ? '...' : ''));
+  }
+  console.log('--------------------\n');
+}
+
 const instance = axios.create({
   baseURL: 'https://admin.shop-pro.jp/',
   headers: {
@@ -29,6 +61,21 @@ const instance = axios.create({
   transformResponse: [(data) => {
     return encoding.convert(data, { to: 'UNICODE', from: 'EUCJP', type: 'string' });
   }]
+});
+
+instance.interceptors.request.use((config) => {
+  logRequest(config);
+  return config;
+});
+
+instance.interceptors.response.use((response) => {
+  logResponse(response);
+  return response;
+}, (error) => {
+  if (error.response) {
+    logResponse(error.response);
+  }
+  return Promise.reject(error);
 });
 
 const FILE_NAME_MAPPING = {
@@ -54,22 +101,53 @@ async function login(loginId, loginPassword) {
       password: loginPassword
     }));
 
-    if (loginResponse.status !== 302) {
-      throw new Error('Expected a 302 response but did not receive one.');
+    // 200レスポンスの場合は、ページの内容を確認してログイン成功/失敗を判定
+    if (loginResponse.status === 200) {
+      const loginHtml = loginResponse.data;
+      const $ = cheerio.load(loginHtml);
+      
+      // エラーメッセージの存在をチェック
+      const errorMessage = $("#login_form > div.block_login_error > p > span.gn_txt_16px.gn_txt_fwb.gn_dp_block.gn_mg_b_10").text();
+      if (errorMessage) {
+        console.error('Login failed:', errorMessage);
+        return false;
+      }
+      
+      // ログイン後のページかチェック（管理画面のタイトルや特定の要素で判定）
+      const title = $('title').text();
+      if (title.includes('ログイン') || title.includes('Login')) {
+        console.error('Login failed: Still on login page');
+        return false;
+      }
+      
+      console.log('Login successful.');
+      return true;
     }
 
-    console.log('Login successful.');
-    return true;
+    // 302リダイレクトの場合も成功として扱う（従来の動作）
+    if (loginResponse.status === 302) {
+      console.log('Login successful.');
+      return true;
+    }
+
+    throw new Error(`Unexpected response status: ${loginResponse.status}`);
   } catch (error) {
     if (error.response) {
       if (error.response.status === 302) {
         console.log('Login successful (received a 302 response).');
         return true;
-      } else {
+      } else if (error.response.status === 200) {
         const loginHtml = error.response.data;
         const $ = cheerio.load(loginHtml);
         const errorMessage = $("#login_form > div.block_login_error > p > span.gn_txt_16px.gn_txt_fwb.gn_dp_block.gn_mg_b_10").text();
-        console.error('Login failed:', errorMessage);
+        if (errorMessage) {
+          console.error('Login failed:', errorMessage);
+        } else {
+          console.error('Login failed: Unexpected response');
+        }
+        return false;
+      } else {
+        console.error('Login failed: HTTP', error.response.status);
         return false;
       }
     } else {
@@ -302,5 +380,6 @@ async function fetchDefaultTemplateUid(loginId, loginPassword) {
 module.exports = {
   fetchTemplate,
   uploadTemplates,
-  fetchDefaultTemplateUid
+  fetchDefaultTemplateUid,
+  setDebugMode
 };
